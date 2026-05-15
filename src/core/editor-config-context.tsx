@@ -7,26 +7,36 @@ import {
   type ReactNode,
 } from "react";
 
-import {
-  DEMO_ACTIVE_PATIENT,
-  DEMO_MENTION_CATEGORY_TREE,
-  DEMO_MENTION_PATIENTS,
-} from "@/defaults/demo-mentions";
-import { DEMO_AUTOCOMPLETE_TERMS } from "@/defaults/demo-autocomplete";
-import { DEMO_NOTE_TEMPLATES } from "@/defaults/demo-templates";
 import { buildMentionSearchIndex } from "@/lexical/mention-schema-data";
 import type { MentionsRuntimeConfig } from "@/lexical/mention-types";
 
 import type {
   RichTextEditorAutocompleteConfig,
+  RichTextEditorConfig,
   RichTextEditorMentionsConfig,
   RichTextEditorSignerConfig,
   RichTextEditorTemplatesConfig,
-  RichTextEditorToolId,
   RichTextEditorToolsConfig,
+  StatusBarToolId,
+  ToolbarToolId,
 } from "./types";
 
-const ALL_STATUS_BAR_TOOLS: RichTextEditorToolId[] = [
+const ALL_TOOLBAR_TOOLS: ToolbarToolId[] = [
+  "history",
+  "blockFormat",
+  "elementFormat",
+  "fontFamily",
+  "fontSize",
+  "fontColor",
+  "fontBackground",
+  "fontFormat",
+  "subSuper",
+  "clearFormatting",
+  "link",
+  "insert",
+];
+
+const ALL_STATUS_BAR_TOOLS: StatusBarToolId[] = [
   "characterCount",
   "copyAll",
   "autocompleteToggle",
@@ -42,7 +52,7 @@ const ALL_STATUS_BAR_TOOLS: RichTextEditorToolId[] = [
   "auditLog",
 ];
 
-const DEFAULT_STATUS_BAR_TOOLS: RichTextEditorToolId[] = [
+const DEFAULT_STATUS_BAR_TOOLS: StatusBarToolId[] = [
   "characterCount",
   "copyAll",
   "importExport",
@@ -51,11 +61,29 @@ const DEFAULT_STATUS_BAR_TOOLS: RichTextEditorToolId[] = [
   "clear",
 ];
 
+function resolveToolbarTools(
+  tools: RichTextEditorToolsConfig | undefined,
+): Set<ToolbarToolId> {
+  if (tools?.toolbar === false) {
+    return new Set();
+  }
+  if (tools?.toolbar === true) {
+    return new Set(ALL_TOOLBAR_TOOLS);
+  }
+  if (Array.isArray(tools?.toolbar)) {
+    return new Set(tools.toolbar);
+  }
+  return new Set(ALL_TOOLBAR_TOOLS);
+}
+
 function resolveStatusBarTools(
   tools: RichTextEditorToolsConfig | undefined,
   hasAutocomplete: boolean,
   hasTemplates: boolean,
-): Set<RichTextEditorToolId> {
+): Set<StatusBarToolId> {
+  if (tools?.statusBar === false) {
+    return new Set();
+  }
   if (tools?.statusBar === true) {
     return new Set(ALL_STATUS_BAR_TOOLS);
   }
@@ -72,14 +100,7 @@ function resolveMentions(
   mentions: RichTextEditorMentionsConfig | undefined,
 ): MentionsRuntimeConfig | null {
   if (!mentions) {
-    return {
-      categoryTree: DEMO_MENTION_CATEGORY_TREE,
-      searchIndex: buildMentionSearchIndex(DEMO_MENTION_CATEGORY_TREE, {
-        patients: DEMO_MENTION_PATIENTS,
-      }),
-      patients: DEMO_MENTION_PATIENTS,
-      activePatient: DEMO_ACTIVE_PATIENT,
-    };
+    return null;
   }
 
   const patients = mentions.patients ?? [];
@@ -95,15 +116,43 @@ function resolveMentions(
   };
 }
 
+function resolveTemplates(
+  templates: RichTextEditorTemplatesConfig | undefined,
+): RichTextEditorTemplatesConfig | null {
+  if (!templates) {
+    return null;
+  }
+  return {
+    items: templates.items ?? [],
+    customItems: templates.customItems ?? [],
+    onCustomItemsChange: templates.onCustomItemsChange,
+  };
+}
+
+function resolveAutocomplete(
+  autocomplete: RichTextEditorAutocompleteConfig | undefined,
+): RichTextEditorAutocompleteConfig | null {
+  if (!autocomplete) {
+    return null;
+  }
+  return {
+    additionalTerms: autocomplete.additionalTerms ?? [],
+    enableEnglishDictionary: autocomplete.enableEnglishDictionary ?? true,
+  };
+}
+
 export interface RichTextEditorConfigValue {
   mentions: MentionsRuntimeConfig | null;
   showMentions: boolean;
-  autocomplete: RichTextEditorAutocompleteConfig;
-  templates: RichTextEditorTemplatesConfig;
+  autocomplete: RichTextEditorAutocompleteConfig | null;
+  showAutocomplete: boolean;
+  templates: RichTextEditorTemplatesConfig | null;
   signer: RichTextEditorSignerConfig;
   showToolbar: boolean;
-  statusBarTools: Set<RichTextEditorToolId>;
-  isStatusBarToolEnabled: (id: RichTextEditorToolId) => boolean;
+  toolbarTools: Set<ToolbarToolId>;
+  isToolbarToolEnabled: (id: ToolbarToolId) => boolean;
+  statusBarTools: Set<StatusBarToolId>;
+  isStatusBarToolEnabled: (id: StatusBarToolId) => boolean;
 }
 
 const RichTextEditorConfigContext =
@@ -111,46 +160,35 @@ const RichTextEditorConfigContext =
 
 export function RichTextEditorConfigProvider({
   children,
-  mentions: mentionsProp,
-  autocomplete: autocompleteProp,
-  templates: templatesProp,
-  tools,
-  signer: signerProp,
+  config,
 }: {
   children: ReactNode;
-  mentions?: RichTextEditorMentionsConfig;
-  autocomplete?: RichTextEditorAutocompleteConfig;
-  templates?: RichTextEditorTemplatesConfig;
-  tools?: RichTextEditorToolsConfig;
-  signer?: RichTextEditorSignerConfig;
+  config: RichTextEditorConfig;
 }) {
   const value = useMemo((): RichTextEditorConfigValue => {
-    const resolvedMentions = resolveMentions(mentionsProp);
-    const hasExplicitMentions = mentionsProp !== undefined;
+    const mentionsConfig = config.mentions;
+    const resolvedMentions = resolveMentions(mentionsConfig);
     const showMentions =
-      tools?.mentions !== false && (hasExplicitMentions || resolvedMentions !== null);
+      mentionsConfig !== undefined && config.tools?.mentions !== false;
 
-    const autocomplete: RichTextEditorAutocompleteConfig = {
-      terms: autocompleteProp?.terms ?? DEMO_AUTOCOMPLETE_TERMS,
-      enableDictionary: autocompleteProp?.enableDictionary ?? true,
-    };
+    const autocomplete = resolveAutocomplete(config.autocomplete);
+    const showAutocomplete = autocomplete !== null;
 
-    const templates: RichTextEditorTemplatesConfig = {
-      templates: templatesProp?.templates ?? DEMO_NOTE_TEMPLATES,
-      storageKey:
-        templatesProp?.storageKey ?? "rich-text-editor-custom-note-templates",
-    };
+    const templates = resolveTemplates(config.templates);
+    const hasTemplates =
+      (templates?.items.length ?? 0) > 0 ||
+      (templates?.customItems?.length ?? 0) > 0;
 
-    const signer: RichTextEditorSignerConfig = signerProp ?? {
+    const signer: RichTextEditorSignerConfig = config.signer ?? {
       name: "Signer",
       title: "",
     };
 
-    const hasAutocomplete = autocomplete.terms.length > 0;
-    const hasTemplates = templates.templates.length > 0;
+    const toolbarTools = resolveToolbarTools(config.tools);
+    const showToolbar = toolbarTools.size > 0;
     const statusBarTools = resolveStatusBarTools(
-      tools,
-      hasAutocomplete,
+      config.tools,
+      showAutocomplete,
       hasTemplates,
     );
 
@@ -158,13 +196,16 @@ export function RichTextEditorConfigProvider({
       mentions: showMentions ? resolvedMentions : null,
       showMentions,
       autocomplete,
+      showAutocomplete,
       templates,
       signer,
-      showToolbar: tools?.toolbar !== false,
+      showToolbar,
+      toolbarTools,
+      isToolbarToolEnabled: (id) => toolbarTools.has(id),
       statusBarTools,
       isStatusBarToolEnabled: (id) => statusBarTools.has(id),
     };
-  }, [mentionsProp, autocompleteProp, templatesProp, tools, signerProp]);
+  }, [config]);
 
   return (
     <RichTextEditorConfigContext.Provider value={value}>

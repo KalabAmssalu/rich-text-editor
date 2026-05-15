@@ -22,8 +22,10 @@ export interface RichTextEditorMentionsConfig {
 }
 
 export interface RichTextEditorAutocompleteConfig {
-  terms: string[];
-  enableDictionary?: boolean;
+  /** Domain-specific terms (host-provided). */
+  additionalTerms?: string[];
+  /** Built-in English dictionary (default: true when autocomplete is enabled). */
+  enableEnglishDictionary?: boolean;
 }
 
 export interface NoteTemplate {
@@ -34,11 +36,12 @@ export interface NoteTemplate {
 }
 
 export interface RichTextEditorTemplatesConfig {
-  templates: NoteTemplate[];
-  storageKey?: string;
+  items: NoteTemplate[];
+  customItems?: NoteTemplate[];
+  onCustomItemsChange?: (templates: NoteTemplate[]) => void;
 }
 
-export type RichTextEditorToolId =
+export type StatusBarToolId =
   | "copyAll"
   | "autocompleteToggle"
   | "templates"
@@ -53,9 +56,27 @@ export type RichTextEditorToolId =
   | "auditLog"
   | "characterCount";
 
+export type ToolbarToolId =
+  | "history"
+  | "blockFormat"
+  | "elementFormat"
+  | "fontFamily"
+  | "fontSize"
+  | "fontColor"
+  | "fontBackground"
+  | "fontFormat"
+  | "subSuper"
+  | "clearFormatting"
+  | "link"
+  | "insert";
+
+/** @deprecated Use StatusBarToolId */
+export type RichTextEditorToolId = StatusBarToolId;
+
 export interface RichTextEditorToolsConfig {
-  statusBar?: RichTextEditorToolId[] | boolean;
-  toolbar?: boolean;
+  toolbar?: ToolbarToolId[] | boolean;
+  statusBar?: StatusBarToolId[] | boolean;
+  /** When false, disables @ mentions even if `mentions` config is provided. */
   mentions?: boolean;
 }
 
@@ -64,7 +85,16 @@ export interface RichTextEditorSignerConfig {
   title?: string;
 }
 
+export interface RichTextEditorConfig {
+  mentions?: RichTextEditorMentionsConfig;
+  autocomplete?: RichTextEditorAutocompleteConfig;
+  templates?: RichTextEditorTemplatesConfig;
+  signer?: RichTextEditorSignerConfig;
+  tools?: RichTextEditorToolsConfig;
+}
+
 export interface RichTextEditorBoxProps {
+  config?: RichTextEditorConfig;
   namespace?: string;
   id?: string;
   label?: string;

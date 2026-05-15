@@ -9,6 +9,7 @@ import { AutocompleteProvider } from '@/lexical/autocomplete-context';
 import { OverlayPortalRootContext } from '@/lexical/overlay-portal-root-context';
 
 import { RichTextEditorConfigProvider } from './editor-config-context';
+import { mergeEditorConfig } from './merge-editor-config';
 import { createEditorRootExtension } from './editor-root-extension';
 import { LexicalExtensionComposerToolbarFirst } from './LexicalExtensionComposerToolbarFirst';
 import { RichTextEditorFullPlugins } from '../plugins/RichTextEditorFullPlugins';
@@ -26,12 +27,17 @@ export function RichTextEditorBox({
   defaultValue,
   onChange,
   minHeightClassName,
+  config,
   mentions,
   autocomplete,
   templates,
   tools,
   signer,
 }: RichTextEditorBoxProps) {
+  const editorConfig = useMemo(
+    () => mergeEditorConfig({ config, mentions, autocomplete, templates, tools, signer }),
+    [config, mentions, autocomplete, templates, tools, signer],
+  );
   const serialized = value ?? defaultValue ?? undefined;
   const [isClient, setIsClient] = useState(false);
   const [anchorElem, setAnchorElem] = useState<HTMLDivElement | null>(null);
@@ -101,13 +107,7 @@ export function RichTextEditorBox({
       {label ? (
         <span className="mb-2 block text-sm font-medium text-foreground">{label}</span>
       ) : null}
-      <RichTextEditorConfigProvider
-        mentions={mentions}
-        autocomplete={autocomplete}
-        templates={templates}
-        tools={tools}
-        signer={signer}
-      >
+      <RichTextEditorConfigProvider config={editorConfig}>
         <AutocompleteProvider>
           <OverlayPortalRootContext.Provider value={overlayPortalRef}>
             <LexicalExtensionComposerToolbarFirst

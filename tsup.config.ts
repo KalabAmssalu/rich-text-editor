@@ -32,7 +32,7 @@ export default defineConfig({
       js: '"use client";',
     };
   },
-  onSuccess() {
+  async onSuccess() {
     const outDir = join(__dirname, "dist");
     mkdirSync(outDir, { recursive: true });
     bundlePackageStyles(outDir);

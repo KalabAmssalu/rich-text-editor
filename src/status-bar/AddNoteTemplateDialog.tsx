@@ -6,10 +6,6 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 
 import { useRichTextEditorConfig } from "@/core/editor-config-context";
 import type { NoteTemplate } from "@/core/types";
-import {
-  addCustomNoteTemplate,
-  createCustomTemplateId,
-} from "@/data/note-templates-storage";
 import { captureEditorTemplateBody } from "@/lexical/capture-editor-template-body";
 import { Button } from "@/ui/button";
 import {
@@ -22,6 +18,14 @@ import {
 } from "@/ui/dialog";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
+
+function createCustomTemplateId(title: string): string {
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  return `custom-${slug || "template"}-${Date.now()}`;
+}
 
 export function AddNoteTemplateDialog({
   open,
@@ -51,6 +55,10 @@ export function AddNoteTemplateDialog({
   );
 
   const handleSave = useCallback(() => {
+    if (!templatesConfig?.onCustomItemsChange) {
+      return;
+    }
+
     const title = name.trim();
     if (!title) {
       setError("Enter a template name.");
@@ -69,10 +77,18 @@ export function AddNoteTemplateDialog({
       body,
     };
 
-    const next = addCustomNoteTemplate(template, templatesConfig.storageKey);
+    const existing = templatesConfig.customItems ?? [];
+    const next = [template, ...existing];
+    templatesConfig.onCustomItemsChange(next);
     onCreated(next);
     handleOpenChange(false);
-  }, [editor, handleOpenChange, name, onCreated, templatesConfig.storageKey]);
+  }, [
+    editor,
+    handleOpenChange,
+    name,
+    onCreated,
+    templatesConfig,
+  ]);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 
@@ -8,7 +8,6 @@ import { FileStackIcon, PlusIcon } from "lucide-react";
 
 import { useRichTextEditorConfig } from "@/core/editor-config-context";
 import type { NoteTemplate } from "@/core/types";
-import { loadCustomNoteTemplates } from "@/data/note-templates-storage";
 import { insertNoteTemplate } from "@/lexical/insert-note-template";
 import { AddNoteTemplateDialog } from "@/status-bar/AddNoteTemplateDialog";
 import { Button } from "@/ui/button";
@@ -29,20 +28,26 @@ export function TemplateNotePlugin() {
   const { templates: templatesConfig } = useRichTextEditorConfig();
   const [open, setOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [customTemplates, setCustomTemplates] = useState<NoteTemplate[]>([]);
 
-  useEffect(() => {
-    setCustomTemplates(loadCustomNoteTemplates(templatesConfig.storageKey));
-  }, [templatesConfig.storageKey]);
+  const customTemplates = templatesConfig?.customItems ?? [];
+  const items = templatesConfig?.items ?? [];
+  const canManageCustom = Boolean(templatesConfig?.onCustomItemsChange);
 
   const allTemplates = useMemo(
-    () => [...customTemplates, ...templatesConfig.templates],
-    [customTemplates],
+    () => [...customTemplates, ...items],
+    [customTemplates, items],
   );
 
-  const handleCreated = useCallback((templates: NoteTemplate[]) => {
-    setCustomTemplates(templates);
-  }, []);
+  const handleCreated = useCallback(
+    (templates: NoteTemplate[]) => {
+      templatesConfig?.onCustomItemsChange?.(templates);
+    },
+    [templatesConfig],
+  );
+
+  if (!templatesConfig) {
+    return null;
+  }
 
   return (
     <>
@@ -71,23 +76,25 @@ export function TemplateNotePlugin() {
                 Inserts at the end (replaces if empty)
               </p>
             </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-8 shrink-0"
-                  aria-label="Add template from current note"
-                  onClick={() => {
-                    setAddDialogOpen(true);
-                  }}
-                >
-                  <PlusIcon className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Add template</TooltipContent>
-            </Tooltip>
+            {canManageCustom ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 shrink-0"
+                    aria-label="Add template from current note"
+                    onClick={() => {
+                      setAddDialogOpen(true);
+                    }}
+                  >
+                    <PlusIcon className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Add template</TooltipContent>
+              </Tooltip>
+            ) : null}
           </div>
           <ul className="max-h-[min(50vh,280px)] overflow-y-auto p-1">
             {allTemplates.length === 0 ? (
@@ -119,11 +126,13 @@ export function TemplateNotePlugin() {
         </PopoverContent>
       </Popover>
 
-      <AddNoteTemplateDialog
-        open={addDialogOpen}
-        onOpenChange={setAddDialogOpen}
-        onCreated={handleCreated}
-      />
+      {canManageCustom ? (
+        <AddNoteTemplateDialog
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          onCreated={handleCreated}
+        />
+      ) : null}
     </>
   );
 }

@@ -2,6 +2,7 @@
 
 import type { Dispatch, SetStateAction } from 'react';
 
+import { useRichTextEditorConfig } from '@/core/editor-config-context';
 import { BlockFormatDropDown } from '@/lexical/block-format-toolbar-plugin';
 import { BlockInsertPlugin } from './BlockInsertPlugin';
 import { ClearFormattingToolbarPlugin } from '@/lexical/clear-formatting-toolbar-plugin';
@@ -34,41 +35,90 @@ export function EditorXToolbar({
   setIsLinkEditMode: Dispatch<SetStateAction<boolean>>;
   disabled?: boolean;
 }) {
+  const { isToolbarToolEnabled } = useRichTextEditorConfig();
+
   if (disabled) {
+    return null;
+  }
+
+  const showHistory = isToolbarToolEnabled('history');
+  const showBlockFormat = isToolbarToolEnabled('blockFormat');
+  const showElementFormat = isToolbarToolEnabled('elementFormat');
+  const showFontFamily = isToolbarToolEnabled('fontFamily');
+  const showFontSize = isToolbarToolEnabled('fontSize');
+  const showFontColor = isToolbarToolEnabled('fontColor');
+  const showFontBackground = isToolbarToolEnabled('fontBackground');
+  const showFontFormat = isToolbarToolEnabled('fontFormat');
+  const showSubSuper = isToolbarToolEnabled('subSuper');
+  const showClearFormatting = isToolbarToolEnabled('clearFormatting');
+  const showLink = isToolbarToolEnabled('link');
+  const showInsert = isToolbarToolEnabled('insert');
+
+  const showFontGroup =
+    showFontFamily ||
+    showFontSize ||
+    showFontColor ||
+    showFontBackground ||
+    showFontFormat ||
+    showSubSuper ||
+    showClearFormatting;
+
+  if (
+    !showHistory &&
+    !showBlockFormat &&
+    !showElementFormat &&
+    !showFontGroup &&
+    !showLink &&
+    !showInsert
+  ) {
     return null;
   }
 
   return (
     <div className="flex flex-wrap items-center gap-1 bg-muted/20 p-1.5">
-      <HistoryToolbarPlugin />
-      <Separator orientation="vertical" className="mx-0.5 h-6" />
-      <BlockFormatDropDown>
-        <FormatParagraph />
-        <FormatHeading levels={['h1', 'h2', 'h3']} />
-        <FormatNumberedList />
-        <FormatBulletedList />
-        <FormatCheckList />
-        <FormatQuote />
-        <FormatCodeBlock />
-      </BlockFormatDropDown>
-      <ElementFormatToolbarPlugin />
-      <Separator orientation="vertical" className="mx-0.5 h-6" />
-      <FontFamilyToolbarPlugin />
-      <FontSizeToolbarPlugin />
-      <FontColorToolbarPlugin />
-      <FontBackgroundToolbarPlugin />
-      <FontFormatToolbarPlugin />
-      <SubSuperToolbarPlugin />
-      <ClearFormattingToolbarPlugin />
-      <Separator orientation="vertical" className="mx-0.5 h-6" />
-      <LinkToolbarPlugin setIsLinkEditMode={setIsLinkEditMode} />
-      <Separator orientation="vertical" className="mx-0.5 h-6" />
-      <BlockInsertPlugin>
-        <InsertImage />
-        <InsertTable />
-        <InsertHorizontalRule />
-        <InsertEmbeds />
-      </BlockInsertPlugin>
+      {showHistory ? <HistoryToolbarPlugin /> : null}
+      {showHistory && (showBlockFormat || showElementFormat) ? (
+        <Separator orientation="vertical" className="mx-0.5 h-6" />
+      ) : null}
+      {showBlockFormat ? (
+        <BlockFormatDropDown>
+          <FormatParagraph />
+          <FormatHeading levels={['h1', 'h2', 'h3']} />
+          <FormatNumberedList />
+          <FormatBulletedList />
+          <FormatCheckList />
+          <FormatQuote />
+          <FormatCodeBlock />
+        </BlockFormatDropDown>
+      ) : null}
+      {showElementFormat ? <ElementFormatToolbarPlugin /> : null}
+      {(showBlockFormat || showElementFormat) && showFontGroup ? (
+        <Separator orientation="vertical" className="mx-0.5 h-6" />
+      ) : null}
+      {showFontFamily ? <FontFamilyToolbarPlugin /> : null}
+      {showFontSize ? <FontSizeToolbarPlugin /> : null}
+      {showFontColor ? <FontColorToolbarPlugin /> : null}
+      {showFontBackground ? <FontBackgroundToolbarPlugin /> : null}
+      {showFontFormat ? <FontFormatToolbarPlugin /> : null}
+      {showSubSuper ? <SubSuperToolbarPlugin /> : null}
+      {showClearFormatting ? <ClearFormattingToolbarPlugin /> : null}
+      {showFontGroup && showLink ? (
+        <Separator orientation="vertical" className="mx-0.5 h-6" />
+      ) : null}
+      {showLink ? (
+        <LinkToolbarPlugin setIsLinkEditMode={setIsLinkEditMode} />
+      ) : null}
+      {showLink && showInsert ? (
+        <Separator orientation="vertical" className="mx-0.5 h-6" />
+      ) : null}
+      {showInsert ? (
+        <BlockInsertPlugin>
+          <InsertImage />
+          <InsertTable />
+          <InsertHorizontalRule />
+          <InsertEmbeds />
+        </BlockInsertPlugin>
+      ) : null}
     </div>
   );
 }
