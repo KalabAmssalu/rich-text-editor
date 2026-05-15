@@ -1,0 +1,27 @@
+/* Mention @ menu: thin scrollbar, visible only while hovering the list */
+.mentions-popover-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.mentions-popover-scroll:hover {
+  scrollbar-color: color-mix(in oklch, var(--muted-foreground) 45%, transparent)
+    transparent;
+}
+
+.mentions-popover-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.mentions-popover-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mentions-popover-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+}
+
+.mentions-popover-scroll:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--muted-foreground) 45%, transparent);
+}
