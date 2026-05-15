@@ -13,10 +13,10 @@ Peer dependencies: `react`, `react-dom`, `lexical`, and matching `@lexical/*` pa
 ## Quick start
 
 ```tsx
-'use client';
+"use client";
 
-import { RichTextEditorBox } from '@kalabamssalu/rich-text-editor';
-import '@kalabamssalu/rich-text-editor/styles.css';
+import { RichTextEditorBox } from "@kalabamssalu/rich-text-editor";
+import "@kalabamssalu/rich-text-editor/styles.css";
 
 export function NotesEditor() {
   return (
@@ -66,15 +66,15 @@ Pass a single `config` object (flat props override nested fields):
 />
 ```
 
-| Field | Description |
-|-------|-------------|
-| `mentions` | Category tree, optional search index, patients, active patient |
-| `autocomplete` | `additionalTerms` and optional `enableEnglishDictionary` |
-| `templates` | `items`, optional `customItems` + `onCustomItemsChange` (host-owned persistence) |
-| `tools.toolbar` | `false`, `true`, or a `ToolbarToolId[]` |
-| `tools.statusBar` | `false`, `true`, or a `StatusBarToolId[]` |
-| `tools.mentions` | Set `false` to disable @ mentions |
-| `signer` | Name/title for signature blocks |
+| Field             | Description                                                                      |
+| ----------------- | -------------------------------------------------------------------------------- |
+| `mentions`        | Category tree, optional search index, patients, active patient                   |
+| `autocomplete`    | `additionalTerms` and optional `enableEnglishDictionary`                         |
+| `templates`       | `items`, optional `customItems` + `onCustomItemsChange` (host-owned persistence) |
+| `tools.toolbar`   | `false`, `true`, or a `ToolbarToolId[]`                                          |
+| `tools.statusBar` | `false`, `true`, or a `StatusBarToolId[]`                                        |
+| `tools.mentions`  | Set `false` to disable @ mentions                                                |
+| `signer`          | Name/title for signature blocks                                                  |
 
 There is no built-in clinical or demo data in v0.2.0 — configure everything from your app.
 
@@ -90,7 +90,7 @@ There is no built-in clinical or demo data in v0.2.0 — configure everything fr
 ```js
 // next.config.mjs
 export default {
-  transpilePackages: ['@kalabamssalu/rich-text-editor'],
+  transpilePackages: ["@kalabamssalu/rich-text-editor"],
 };
 ```
 

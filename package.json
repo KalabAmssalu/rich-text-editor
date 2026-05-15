@@ -7,6 +7,10 @@
     "type": "git",
     "url": "https://github.com/KalabAmssalu/rich-text-editor.git"
   },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "files": [
     "dist",
     "README.md"
@@ -52,7 +56,6 @@
     "react-dom": "^18.0.0 || ^19.0.0"
   },
   "dependencies": {
-    "@kalabamssalu/rich-text-editor": "git+https://github.com/KalabAmssalu/rich-text-editor.git",
     "@lexical/code-prism": "^0.44.0",
     "@lexical/code-shiki": "^0.44.0",
     "class-variance-authority": "^0.7.1",
