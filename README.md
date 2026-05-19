@@ -1,98 +1,669 @@
 # @kalabamssalu/rich-text-editor
 
-Lexical-based rich text editor for React (Next.js compatible) with configurable mentions, autocomplete, note templates, and toolbars.
+Lexical-based rich text editor for React (Next.js compatible) with a formatting toolbar, status bar, `@` mentions, autocomplete, note templates, import/export, and electronic signatures.
 
-## Install
+Built for clinical and documentation workflows, but **ships no demo or clinical data** — you provide mentions, templates, and domain terms from your app.
+
+---
+
+## Table of contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Styling](#styling)
+- [Quick start](#quick-start)
+- [`RichTextEditorBox` props](#richtexteditorbox-props)
+- [Saving and loading documents](#saving-and-loading-documents)
+- [Configuration](#configuration)
+  - [Mentions](#mentions)
+  - [Autocomplete](#autocomplete)
+  - [Note templates](#note-templates)
+  - [Signer](#signer)
+  - [Tools (toolbar and status bar)](#tools-toolbar-and-status-bar)
+- [Full configuration example](#full-configuration-example)
+- [Next.js](#nextjs)
+- [Other frameworks](#other-frameworks)
+- [Public API exports](#public-api-exports)
+- [Troubleshooting](#troubleshooting)
+- [Breaking changes (0.1 → 0.2)](#breaking-changes-01--02)
+- [License](#license)
+
+---
+
+## Features
+
+| Area | Capabilities |
+|------|----------------|
+| **Formatting toolbar** | Undo/redo, block type, alignment, fonts, colors, bold/italic/underline, sub/superscript, links, inserts (images, tables, embeds, horizontal rule, columns, date/time, etc.) |
+| **Status bar** | Character count, copy all, import/export (`.lexical` JSON, `.docx`), markdown toggle, edit mode, clear |
+| **Optional status tools** | Autocomplete toggle, templates, signature, speech-to-text, AI assistant placeholder, voice translator placeholder, audit log placeholder |
+| **Mentions** | Type `@` for a searchable category tree with insertable values |
+| **Autocomplete** | Inline word suggestions from your terms, mention labels, patients, and optional English dictionary |
+| **Templates** | Insert markdown note templates; host-owned custom template storage |
+| **Export** | `lexicalJson` (round-trip) + `html` (display/archive) on every change |
+
+---
+
+## Requirements
+
+- **React** 18 or 19
+- **Lexical** `^0.44.0` and matching `@lexical/*` packages (see [Installation](#installation))
+- **Tailwind CSS** in the host app (utility classes such as `bg-background`, `text-muted-foreground` are used throughout the UI)
+- **Client-only rendering** — the editor uses browser APIs and must not run on the server
+
+---
+
+## Installation
 
 ```bash
 npm install @kalabamssalu/rich-text-editor
 ```
 
-Peer dependencies: `react`, `react-dom`, `lexical`, and matching `@lexical/*` packages at `^0.44.0`.
+Install **peer dependencies** at the same Lexical version (required for correct bundling; avoids duplicate Lexical copies):
+
+```bash
+npm install lexical@^0.44.0 \
+  @lexical/react@^0.44.0 \
+  @lexical/code@^0.44.0 \
+  @lexical/extension@^0.44.0 \
+  @lexical/file@^0.44.0 \
+  @lexical/hashtag@^0.44.0 \
+  @lexical/html@^0.44.0 \
+  @lexical/link@^0.44.0 \
+  @lexical/list@^0.44.0 \
+  @lexical/markdown@^0.44.0 \
+  @lexical/overflow@^0.44.0 \
+  @lexical/rich-text@^0.44.0 \
+  @lexical/selection@^0.44.0 \
+  @lexical/table@^0.44.0 \
+  @lexical/text@^0.44.0 \
+  @lexical/utils@^0.44.0 \
+  react react-dom
+```
+
+With **pnpm**, add to `package.json`:
+
+```json
+{
+  "dependencies": {
+    "@kalabamssalu/rich-text-editor": "^0.2.0",
+    "lexical": "^0.44.0",
+    "@lexical/react": "^0.44.0"
+  }
+}
+```
+
+Then install the remaining `@lexical/*` peers listed above at `^0.44.0`.
+
+---
+
+## Styling
+
+### 1. Import package CSS
+
+Always import the bundled editor theme and mention styles:
+
+```tsx
+import "@kalabamssalu/rich-text-editor/styles.css";
+```
+
+This file is published at `@kalabamssalu/rich-text-editor/styles.css` and includes Lexical editor theme rules and mention popover styles.
+
+### 2. Tailwind CSS (required for layout and colors)
+
+The UI uses Tailwind utility classes. Your app must generate those utilities from the **built package** output.
+
+**Tailwind CSS v4** — in your global CSS (adjust the path to `node_modules`):
+
+```css
+@import "tailwindcss";
+
+@source "../node_modules/@kalabamssalu/rich-text-editor/dist/**/*.{js,mjs}";
+```
+
+**Tailwind CSS v3** — add to `content` in `tailwind.config.js`:
+
+```js
+module.exports = {
+  content: [
+    "./app/**/*.{js,ts,jsx,tsx}",
+    "./components/**/*.{js,ts,jsx,tsx}",
+    "./node_modules/@kalabamssalu/rich-text-editor/dist/**/*.{js,mjs}",
+  ],
+};
+```
+
+### 3. Design tokens (shadcn-style)
+
+The editor expects CSS variables used by shadcn/ui, for example:
+
+- `--background`, `--foreground`
+- `--muted`, `--muted-foreground`
+- `--border`, `--input`, `--ring`
+- `--primary`, `--accent`, `--destructive`
+
+If your app uses shadcn/ui or a similar theme, these are usually already defined. Without them, the editor still works but colors may look flat.
+
+### 4. Toast notifications (import/export)
+
+Import and export actions use [Sonner](https://sonner.emilkowal.ski/). Add a toaster once in your app root:
+
+```tsx
+import { Toaster } from "sonner";
+
+export function RootLayout({ children }) {
+  return (
+    <>
+      {children}
+      <Toaster />
+    </>
+  );
+}
+```
+
+---
 
 ## Quick start
 
 ```tsx
 "use client";
 
+import { useState } from "react";
 import { RichTextEditorBox } from "@kalabamssalu/rich-text-editor";
+import type { RichTextEditorDocumentExport } from "@kalabamssalu/rich-text-editor";
 import "@kalabamssalu/rich-text-editor/styles.css";
 
 export function NotesEditor() {
+  const [doc, setDoc] = useState<RichTextEditorDocumentExport | null>(null);
+
   return (
     <RichTextEditorBox
-      label="Notes"
-      onChange={({ lexicalJson, html }) => {
-        console.log(lexicalJson, html);
+      label="Clinical note"
+      placeholder="Start typing…"
+      onChange={(document) => setDoc(document)}
+    />
+  );
+}
+```
+
+---
+
+## `RichTextEditorBox` props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `config` | `RichTextEditorConfig` | — | Nested configuration object (see below) |
+| `mentions` | `RichTextEditorMentionsConfig` | — | Shorthand; overrides `config.mentions` |
+| `autocomplete` | `RichTextEditorAutocompleteConfig` | — | Shorthand; overrides `config.autocomplete` |
+| `templates` | `RichTextEditorTemplatesConfig` | — | Shorthand; overrides `config.templates` |
+| `tools` | `RichTextEditorToolsConfig` | — | Shorthand; overrides `config.tools` |
+| `signer` | `RichTextEditorSignerConfig` | — | Shorthand; overrides `config.signer` |
+| `namespace` | `string` | `"rich-text-editor"` | Lexical editor namespace (use unique names if multiple editors on one page) |
+| `id` | `string` | — | HTML `id` on the wrapper |
+| `label` | `string` | — | Accessible label above the editor |
+| `placeholder` | `string` | `"Start typing…"` | Placeholder when empty |
+| `className` | `string` | — | Classes on the outer wrapper |
+| `minHeightClassName` | `string` | `"min-h-[260px]"` (surface) | Tailwind min-height for the typing area |
+| `disabled` | `boolean` | `false` | Disables editing and `onChange` |
+| `defaultValue` | `string \| null` | — | Initial Lexical JSON string (uncontrolled) |
+| `value` | `string \| null` | — | Lexical JSON string to load (see [Saving and loading](#saving-and-loading-documents)) |
+| `onChange` | `(doc: RichTextEditorDocumentExport) => void` | — | Called when the document changes |
+
+**Config merge rule:** Top-level props (`mentions`, `autocomplete`, etc.) override the same field inside `config`.
+
+---
+
+## Saving and loading documents
+
+### `onChange` payload
+
+```ts
+interface RichTextEditorDocumentExport {
+  /** Stringified Lexical EditorState JSON — use for save/load round-trip */
+  lexicalJson: string;
+  /** HTML snapshot for display, PDF, or search (includes wrapper div) */
+  html: string;
+}
+```
+
+- Use **`lexicalJson`** when you need to reload the editor or preserve custom nodes (mentions, signatures, embeds).
+- Use **`html`** for read-only views, printing, or backends that only store HTML.
+
+### Uncontrolled (initial content only)
+
+```tsx
+<RichTextEditorBox
+  defaultValue={savedLexicalJson}
+  onChange={({ lexicalJson }) => {
+    // persist lexicalJson to your API
+  }}
+/>
+```
+
+### Controlled (load existing note)
+
+Pass previously saved `lexicalJson`:
+
+```tsx
+const [noteJson, setNoteJson] = useState<string | null>(savedFromApi);
+
+<RichTextEditorBox
+  value={noteJson}
+  onChange={({ lexicalJson }) => setNoteJson(lexicalJson)}
+/>
+```
+
+**Important:**
+
+- `value` must be **Lexical EditorState JSON** (what `onChange` returns in `lexicalJson`), not raw HTML or plain text.
+- Changing `value` recreates the editor instance (cursor and undo history reset). For frequent external updates, debounce saves in the parent or avoid passing `value` on every keystroke.
+
+### Invalid `value` errors
+
+If `value` is malformed JSON or the wrong shape, Lexical may fail to parse it and the content area can show an error boundary message. Validate JSON before passing it in.
+
+---
+
+## Configuration
+
+Pass everything through `config` or via flat props.
+
+### Mentions
+
+Enable by providing `mentions` with a **`categoryTree`** (required). Type `@` in the editor to open the picker.
+
+```tsx
+import { RichTextEditorBox, buildMentionSearchIndex } from "@kalabamssalu/rich-text-editor";
+import type { MentionMenuNode } from "@kalabamssalu/rich-text-editor";
+
+const categoryTree: MentionMenuNode[] = [
+  {
+    id: "vitals",
+    label: "Vitals",
+    icon: "Activity",
+    children: [
+      {
+        id: "bp",
+        label: "Blood pressure",
+        icon: "HeartPulse",
+        insertValue: "BP 120/80 mmHg",
+      },
+    ],
+  },
+  {
+    id: "meds",
+    label: "Medications",
+    icon: "Pill",
+    insertValue: "No new medications",
+  },
+];
+
+<RichTextEditorBox
+  config={{
+    mentions: {
+      categoryTree,
+      // Optional: pre-built index (otherwise built automatically)
+      searchIndex: buildMentionSearchIndex(categoryTree, { patients: [] }),
+      patients: [{ id: "p1", name: "Jane Doe", mrn: "MRN-001" }],
+      activePatient: { id: "p1", name: "Jane Doe", mrn: "MRN-001" },
+    },
+    tools: { mentions: true }, // default when mentions is set; set false to hide @ picker
+  }}
+/>
+```
+
+**`MentionMenuNode` fields**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Stable id |
+| `label` | `string` | Display label |
+| `icon` | `MentionIconName` | Lucide-based icon name (e.g. `"Stethoscope"`, `"Pill"`) |
+| `children` | `MentionMenuNode[]` | Nested categories |
+| `insertValue` | `string` | Text inserted when the row is chosen (leaf nodes) |
+| `sampleData` | `string` | Extra text for search indexing |
+
+**Icons:** `UserRound`, `Stethoscope`, `Pill`, `ClipboardList`, `Activity`, `Microscope`, `HeartPulse`, `Hospital`, `CalendarDays`, `FileText`, `IdCard`, `History`, `PillBottle`, `Syringe`, `ClipboardSignature`, `Building2`, `Scan`, `FlaskConical`, `Package`.
+
+Disable mentions while keeping other config:
+
+```tsx
+tools: { mentions: false }
+```
+
+---
+
+### Autocomplete
+
+Enable by passing `autocomplete` (even `{}`). The status bar shows an autocomplete toggle when autocomplete is configured.
+
+```tsx
+<RichTextEditorBox
+  config={{
+    autocomplete: {
+      additionalTerms: ["hypertension", "dyspnea", "SOB"],
+      enableEnglishDictionary: true, // default: true
+    },
+  }}
+/>
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `additionalTerms` | `string[]` | `[]` | Domain-specific words |
+| `enableEnglishDictionary` | `boolean` | `true` | Built-in English word list |
+
+Autocomplete also indexes mention labels, `insertValue`s, patient names/MRNs, and active patient fields when mentions are configured.
+
+Users can toggle autocomplete from the status bar; preference is stored in `localStorage` under `emr-rich-text-autocomplete-enabled`.
+
+---
+
+### Note templates
+
+Template **`body`** is **markdown** (headings `#` / `##` / `###`, paragraphs). Inserting replaces an empty editor or appends to the end.
+
+```tsx
+const [customTemplates, setCustomTemplates] = useState<NoteTemplate[]>([]);
+
+<RichTextEditorBox
+  config={{
+    templates: {
+      items: [
+        {
+          id: "soap",
+          title: "SOAP note",
+          description: "Subjective, objective, assessment, plan",
+          body: "## Subjective\n\n## Objective\n\n## Assessment\n\n## Plan\n",
+        },
+      ],
+      customItems: customTemplates,
+      onCustomItemsChange: setCustomTemplates, // host persists to API/localStorage
+    },
+  }}
+/>
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `items` | `NoteTemplate[]` | Built-in templates you define |
+| `customItems` | `NoteTemplate[]` | User-created templates (your state) |
+| `onCustomItemsChange` | `(templates: NoteTemplate[]) => void` | Called when user adds a custom template |
+
+The templates button appears in the status bar only when `templates` is set and there is at least one item or custom template.
+
+---
+
+### Signer
+
+Used by the electronic signature block in the status bar (when `signature` tool is enabled).
+
+```tsx
+config={{
+  signer: { name: "Dr. Sam Rivera", title: "Attending Physician" },
+}}
+```
+
+Default if omitted: `{ name: "Signer", title: "" }`.
+
+---
+
+### Tools (toolbar and status bar)
+
+```tsx
+config={{
+  tools: {
+    toolbar: ["history", "blockFormat", "link", "insert"],
+    statusBar: ["characterCount", "copyAll", "clear"],
+    mentions: true,
+  },
+}}
+```
+
+| `toolbar` / `statusBar` value | Behavior |
+|-------------------------------|----------|
+| omitted | Toolbar: all tools. Status bar: default set (see below) |
+| `true` | All tools |
+| `false` | Hidden |
+| `ToolbarToolId[]` / `StatusBarToolId[]` | Only listed tools |
+
+**Default status bar** (when `statusBar` is omitted):  
+`characterCount`, `copyAll`, `importExport`, `markdown`, `editMode`, `clear`  
+Plus `autocompleteToggle` if autocomplete is configured, and `templates` if templates are configured.
+
+#### Toolbar tool IDs
+
+| ID | Feature |
+|----|---------|
+| `history` | Undo / redo |
+| `blockFormat` | Paragraph, headings, lists, quote, code block |
+| `elementFormat` | Alignment, indent, line height |
+| `fontFamily` | Font family |
+| `fontSize` | Font size |
+| `fontColor` | Text color |
+| `fontBackground` | Highlight color |
+| `fontFormat` | Bold, italic, underline, strikethrough |
+| `subSuper` | Subscript / superscript |
+| `clearFormatting` | Clear inline formatting |
+| `link` | Insert / edit links |
+| `insert` | Images, tables, embeds, HR, columns, date/time, etc. |
+
+#### Status bar tool IDs
+
+| ID | Feature |
+|----|---------|
+| `characterCount` | UTF-8 character count |
+| `copyAll` | Copy plain text |
+| `autocompleteToggle` | Enable/disable autocomplete |
+| `templates` | Note template picker |
+| `signature` | Insert signature block |
+| `speechToText` | Browser speech recognition (where supported) |
+| `aiAssistant` | Placeholder dialog (wire your API) |
+| `voiceTranslator` | Placeholder dialog |
+| `importExport` | Import `.lexical` / `.docx`, export Lexical file |
+| `markdown` | Toggle markdown source view |
+| `editMode` | Toggle read-only |
+| `clear` | Clear document |
+| `auditLog` | Placeholder audit UI |
+
+Minimal toolbar example:
+
+```tsx
+<RichTextEditorBox
+  config={{
+    tools: {
+      toolbar: false,
+      statusBar: ["characterCount", "clear"],
+    },
+  }}
+/>
+```
+
+---
+
+## Full configuration example
+
+```tsx
+"use client";
+
+import { useState } from "react";
+import {
+  RichTextEditorBox,
+  buildMentionSearchIndex,
+} from "@kalabamssalu/rich-text-editor";
+import type {
+  NoteTemplate,
+  RichTextEditorDocumentExport,
+} from "@kalabamssalu/rich-text-editor";
+import "@kalabamssalu/rich-text-editor/styles.css";
+
+const categoryTree = [
+  {
+    id: "dx",
+    label: "Diagnosis",
+    icon: "Stethoscope" as const,
+    insertValue: "Primary diagnosis: ",
+  },
+];
+
+export function EncounterNoteEditor({
+  initialLexicalJson,
+}: {
+  initialLexicalJson?: string | null;
+}) {
+  const [customTemplates, setCustomTemplates] = useState<NoteTemplate[]>([]);
+
+  const handleChange = (doc: RichTextEditorDocumentExport) => {
+    // await saveToApi({ lexicalJson: doc.lexicalJson, html: doc.html });
+  };
+
+  return (
+    <RichTextEditorBox
+      label="Encounter note"
+      value={initialLexicalJson ?? undefined}
+      onChange={handleChange}
+      config={{
+        mentions: {
+          categoryTree,
+          searchIndex: buildMentionSearchIndex(categoryTree),
+        },
+        autocomplete: {
+          additionalTerms: ["hypertension", "NPO", "PRN"],
+          enableEnglishDictionary: false,
+        },
+        templates: {
+          items: [
+            {
+              id: "hpi",
+              title: "HPI",
+              description: "History of present illness",
+              body: "## History of present illness\n\n",
+            },
+          ],
+          customItems: customTemplates,
+          onCustomItemsChange: setCustomTemplates,
+        },
+        signer: { name: "Dr. Smith", title: "MD" },
+        tools: {
+          toolbar: true,
+          statusBar: [
+            "characterCount",
+            "copyAll",
+            "templates",
+            "signature",
+            "importExport",
+            "markdown",
+            "clear",
+          ],
+        },
       }}
     />
   );
 }
 ```
 
-## Tailwind CSS v4
-
-In your global CSS:
-
-```css
-@source "../node_modules/@kalabamssalu/rich-text-editor/dist/**/*.{js,mjs}";
-```
-
-## Configuration (v0.2.0)
-
-Pass a single `config` object (flat props override nested fields):
-
-```tsx
-<RichTextEditorBox
-  config={{
-    mentions: { categoryTree: [...] },
-    autocomplete: {
-      additionalTerms: ['hypertension', 'dyspnea'],
-      enableEnglishDictionary: true,
-    },
-    templates: {
-      items: [{ id: '1', title: 'SOAP', description: '...', body: '...' }],
-      customItems: customTemplates,
-      onCustomItemsChange: setCustomTemplates,
-    },
-    tools: {
-      toolbar: ['history', 'blockFormat', 'link'],
-      statusBar: ['characterCount', 'copyAll', 'clear'],
-      mentions: true,
-    },
-    signer: { name: 'Dr. Smith', title: 'Attending' },
-  }}
-  onChange={({ lexicalJson, html }) => { /* parent useState */ }}
-/>
-```
-
-| Field             | Description                                                                      |
-| ----------------- | -------------------------------------------------------------------------------- |
-| `mentions`        | Category tree, optional search index, patients, active patient                   |
-| `autocomplete`    | `additionalTerms` and optional `enableEnglishDictionary`                         |
-| `templates`       | `items`, optional `customItems` + `onCustomItemsChange` (host-owned persistence) |
-| `tools.toolbar`   | `false`, `true`, or a `ToolbarToolId[]`                                          |
-| `tools.statusBar` | `false`, `true`, or a `StatusBarToolId[]`                                        |
-| `tools.mentions`  | Set `false` to disable @ mentions                                                |
-| `signer`          | Name/title for signature blocks                                                  |
-
-There is no built-in clinical or demo data in v0.2.0 — configure everything from your app.
-
-## Breaking changes (0.1 → 0.2)
-
-- Removed `MEDICAL_AUTOCOMPLETE_TERMS` export and `src/defaults/` demo data.
-- `autocomplete.terms` → `autocomplete.additionalTerms`
-- `autocomplete.enableDictionary` → `autocomplete.enableEnglishDictionary`
-- `templates.templates` → `templates.items`; use `customItems` + `onCustomItemsChange` instead of package `storageKey`.
+---
 
 ## Next.js
 
+1. **Client component** — the editor must run on the client:
+
+```tsx
+"use client";
+```
+
+2. **Transpile the package** (App Router or Pages):
+
 ```js
 // next.config.mjs
-export default {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   transpilePackages: ["@kalabamssalu/rich-text-editor"],
 };
+
+export default nextConfig;
 ```
+
+3. Import styles in a client layout or page (see [Styling](#styling)).
+
+4. Add `<Toaster />` from `sonner` if you use import/export.
+
+The editor renders a lightweight placeholder until the client mounts (avoids SSR hydration issues).
+
+---
+
+## Other frameworks
+
+- **Vite / CRA / Remix:** Import styles globally; ensure Tailwind scans `node_modules/@kalabamssalu/rich-text-editor/dist`.
+- **Multiple editors:** Use a unique `namespace` per instance.
+- **Read-only:** `disabled={true}` disables editing and suppresses `onChange`.
+
+---
+
+## Public API exports
+
+```ts
+// Component
+export { RichTextEditorBox } from "@kalabamssalu/rich-text-editor";
+
+// Helpers
+export { mergeEditorConfig } from "@kalabamssalu/rich-text-editor";
+export { buildMentionSearchIndex } from "@kalabamssalu/rich-text-editor";
+
+// Legacy Lexical composer config (minimal nodes only — prefer RichTextEditorBox)
+export { createRichTextEditorInitialConfig } from "@kalabamssalu/rich-text-editor";
+
+// Types
+export type {
+  RichTextEditorBoxProps,
+  RichTextEditorConfig,
+  RichTextEditorDocumentExport,
+  RichTextEditorMentionsConfig,
+  RichTextEditorAutocompleteConfig,
+  RichTextEditorTemplatesConfig,
+  RichTextEditorToolsConfig,
+  RichTextEditorSignerConfig,
+  ToolbarToolId,
+  StatusBarToolId,
+  NoteTemplate,
+  MentionMenuNode,
+  MentionEntry,
+  MentionIconName,
+  MentionSearchPatient,
+} from "@kalabamssalu/rich-text-editor";
+```
+
+`createRichTextEditorInitialConfig` registers only basic nodes. **`RichTextEditorBox` is the supported integration path** — it registers mentions, images, signatures, embeds, and all extensions.
+
+---
+
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---------|----------------|-----|
+| **"An error was thrown."** in the editor area | React error inside the content surface (often caught by Lexical’s error boundary) | Open the browser console for the real error. Ensure `@kalabamssalu/rich-text-editor` is up to date (v0.2.0+ includes required `TooltipProvider`). |
+| Unstyled / broken layout | Tailwind not scanning the package | Add `@source` or `content` path to `dist` (see [Styling](#styling)). |
+| Gray boxes, wrong colors | Missing CSS variables | Add shadcn-style theme variables or match your design tokens. |
+| Editor empty / plugins broken | Missing Lexical peers or duplicate Lexical | Install all `@lexical/*` peers at `^0.44.0`; dedupe with `npm ls lexical`. |
+| `value` does not load | Passing HTML instead of Lexical JSON | Use `onChange`’s `lexicalJson` for `value` / `defaultValue`. |
+| Import/export toasts missing | No Sonner toaster | Add `<Toaster />` from `sonner` to your app root. |
+| Build error: `react-day-picker` | Old install without dependencies | Run `pnpm install` / `npm install` after upgrading the package. |
+| Hydration warning in Next.js | Editor rendered on server | Use `"use client"`; do not import `RichTextEditorBox` in Server Components. |
+
+Enable verbose logging: errors are also logged as `[RichTextEditor]` in the console from the editor’s `onError` handler.
+
+---
+
+## Breaking changes (0.1 → 0.2)
+
+- Removed `MEDICAL_AUTOCOMPLETE_TERMS` export and bundled demo data under `src/defaults/`.
+- `autocomplete.terms` → `autocomplete.additionalTerms`
+- `autocomplete.enableDictionary` → `autocomplete.enableEnglishDictionary`
+- `templates.templates` → `templates.items`
+- Custom template persistence: use `customItems` + `onCustomItemsChange` (host-owned) instead of package `storageKey`.
+
+---
 
 ## License
 
