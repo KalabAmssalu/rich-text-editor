@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@kalabamssalu/rich-text-editor':
-        specifier: git+https://github.com/KalabAmssalu/rich-text-editor.git
-        version: git+https://github.com/KalabAmssalu/rich-text-editor.git#1176013b044b6671eedcab88d215964c422b2854(@lexical/code@0.44.0)(@lexical/extension@0.44.0)(@lexical/file@0.44.0)(@lexical/hashtag@0.44.0)(@lexical/html@0.44.0)(@lexical/link@0.44.0)(@lexical/list@0.44.0)(@lexical/markdown@0.44.0)(@lexical/overflow@0.44.0)(@lexical/react@0.44.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(yjs@13.6.30))(@lexical/rich-text@0.44.0)(@lexical/selection@0.44.0)(@lexical/table@0.44.0)(@lexical/text@0.44.0)(@lexical/utils@0.44.0)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(lexical@0.44.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@lexical/code-prism':
         specifier: ^0.44.0
         version: 0.44.0
@@ -41,6 +38,9 @@ importers:
       radix-ui:
         specifier: ^1.4.3
         version: 1.4.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      react-day-picker:
+        specifier: ^9.7.0
+        version: 9.14.0(react@19.2.6)
       sonner:
         specifier: ^1.7.1
         version: 1.7.4(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -119,6 +119,9 @@ importers:
         version: 5.7.3
 
 packages:
+
+  '@date-fns/tz@1.4.1':
+    resolution: {integrity: sha512-P5LUNhtbj6YfI3iJjw5EL9eUAG6OitD0W3fWQcpQjDRc/QIsL0tRNuO1PcDvPccWL1fSTXXdE1ds+l95DV/OFA==}
 
   '@esbuild/aix-ppc64@0.27.7':
     resolution: {integrity: sha512-EKX3Qwmhz1eMdEJokhALr0YiD0lhQNwDqkPYyPhiSwKrh7/4KRjQc04sZ8db+5DVVnZ1LmbNDI1uAMPEUBnQPg==}
@@ -309,29 +312,6 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
-
-  '@kalabamssalu/rich-text-editor@git+https://github.com/KalabAmssalu/rich-text-editor.git#1176013b044b6671eedcab88d215964c422b2854':
-    resolution: {commit: 1176013b044b6671eedcab88d215964c422b2854, repo: https://github.com/KalabAmssalu/rich-text-editor.git, type: git}
-    version: 0.1.0
-    peerDependencies:
-      '@lexical/code': ^0.44.0
-      '@lexical/extension': ^0.44.0
-      '@lexical/file': ^0.44.0
-      '@lexical/hashtag': ^0.44.0
-      '@lexical/html': ^0.44.0
-      '@lexical/link': ^0.44.0
-      '@lexical/list': ^0.44.0
-      '@lexical/markdown': ^0.44.0
-      '@lexical/overflow': ^0.44.0
-      '@lexical/react': ^0.44.0
-      '@lexical/rich-text': ^0.44.0
-      '@lexical/selection': ^0.44.0
-      '@lexical/table': ^0.44.0
-      '@lexical/text': ^0.44.0
-      '@lexical/utils': ^0.44.0
-      lexical: ^0.44.0
-      react: ^18.0.0 || ^19.0.0
-      react-dom: ^18.0.0 || ^19.0.0
 
   '@lexical/clipboard@0.44.0':
     resolution: {integrity: sha512-nfmNIs7uENqlDI7cm2E4I1Yp8mDJGMhEQIrIV2rNWnL1oeHVXQ7yuYdyoPdcY1zuj/9nvkYBQYUEh0QiGwpETA==}
@@ -1291,6 +1271,10 @@ packages:
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
 
+  '@tabby_ai/hijri-converter@1.0.5':
+    resolution: {integrity: sha512-r5bClKrcIusDoo049dSL8CawnHR6mRdDwhlQuIgZRNty68q0x8k3Lf1BtPAMxRf/GgnHBnIO4ujd3+GQdLWzxQ==}
+    engines: {node: '>=16.0.0'}
+
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
 
@@ -1400,6 +1384,9 @@ packages:
 
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
+
+  date-fns-jalali@4.1.0-0:
+    resolution: {integrity: sha512-hTIP/z+t+qKwBDcmmsnmjWTduxCg+5KfdqWQvb2X/8C9+knYY6epN/pfxdDuyVlSVeFz0sM5eEfwIUQ70U4ckg==}
 
   date-fns@4.1.0:
     resolution: {integrity: sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==}
@@ -1628,6 +1615,12 @@ packages:
         optional: true
       '@types/react-dom':
         optional: true
+
+  react-day-picker@9.14.0:
+    resolution: {integrity: sha512-tBaoDWjPwe0M5pGrum4H0SR6Lyk+BO9oHnp9JbKpGKW2mlraNPgP9BMfsg5pWpwrssARmeqk7YBl2oXutZTaHA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      react: '>=16.8.0'
 
   react-dom@19.2.6:
     resolution: {integrity: sha512-0prMI+hvBbPjsWnxDLxlCGyM8PN6UuWjEUCYmZhO67xIV9Xasa/r/vDnq+Xyq4Lo27g8QSbO5YzARu0D1Sps3g==}
@@ -1863,6 +1856,8 @@ packages:
 
 snapshots:
 
+  '@date-fns/tz@1.4.1': {}
+
   '@esbuild/aix-ppc64@0.27.7':
     optional: true
 
@@ -1979,42 +1974,6 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
-
-  '@kalabamssalu/rich-text-editor@git+https://github.com/KalabAmssalu/rich-text-editor.git#1176013b044b6671eedcab88d215964c422b2854(@lexical/code@0.44.0)(@lexical/extension@0.44.0)(@lexical/file@0.44.0)(@lexical/hashtag@0.44.0)(@lexical/html@0.44.0)(@lexical/link@0.44.0)(@lexical/list@0.44.0)(@lexical/markdown@0.44.0)(@lexical/overflow@0.44.0)(@lexical/react@0.44.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(yjs@13.6.30))(@lexical/rich-text@0.44.0)(@lexical/selection@0.44.0)(@lexical/table@0.44.0)(@lexical/text@0.44.0)(@lexical/utils@0.44.0)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(lexical@0.44.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
-    dependencies:
-      '@lexical/code': 0.44.0
-      '@lexical/code-prism': 0.44.0
-      '@lexical/code-shiki': 0.44.0
-      '@lexical/extension': 0.44.0
-      '@lexical/file': 0.44.0
-      '@lexical/hashtag': 0.44.0
-      '@lexical/html': 0.44.0
-      '@lexical/link': 0.44.0
-      '@lexical/list': 0.44.0
-      '@lexical/markdown': 0.44.0
-      '@lexical/overflow': 0.44.0
-      '@lexical/react': 0.44.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(yjs@13.6.30)
-      '@lexical/rich-text': 0.44.0
-      '@lexical/selection': 0.44.0
-      '@lexical/table': 0.44.0
-      '@lexical/text': 0.44.0
-      '@lexical/utils': 0.44.0
-      class-variance-authority: 0.7.1
-      clsx: 2.1.1
-      cmdk: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      date-fns: 4.1.0
-      lexical: 0.44.0
-      lodash: 4.18.1
-      lucide-react: 0.564.0(react@19.2.6)
-      mammoth: 1.12.0
-      radix-ui: 1.4.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      react: 19.2.6
-      react-dom: 19.2.6(react@19.2.6)
-      sonner: 1.7.4(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      tailwind-merge: 3.6.0
-    transitivePeerDependencies:
-      - '@types/react'
-      - '@types/react-dom'
 
   '@lexical/clipboard@0.44.0':
     dependencies:
@@ -3080,6 +3039,8 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
+  '@tabby_ai/hijri-converter@1.0.5': {}
+
   '@types/estree@1.0.8': {}
 
   '@types/hast@3.0.4':
@@ -3170,6 +3131,8 @@ snapshots:
   core-util-is@1.0.3: {}
 
   csstype@3.2.3: {}
+
+  date-fns-jalali@4.1.0-0: {}
 
   date-fns@4.1.0: {}
 
@@ -3463,6 +3426,14 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
+
+  react-day-picker@9.14.0(react@19.2.6):
+    dependencies:
+      '@date-fns/tz': 1.4.1
+      '@tabby_ai/hijri-converter': 1.0.5
+      date-fns: 4.1.0
+      date-fns-jalali: 4.1.0-0
+      react: 19.2.6
 
   react-dom@19.2.6(react@19.2.6):
     dependencies:
