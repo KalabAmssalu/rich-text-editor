@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 
 import { cn } from '@/lib/utils';
+import { TooltipProvider } from '@/ui/tooltip';
 
 import { AutocompleteProvider } from '@/lexical/autocomplete-context';
 import { OverlayPortalRootContext } from '@/lexical/overlay-portal-root-context';
@@ -107,24 +108,26 @@ export function RichTextEditorBox({
       {label ? (
         <span className="mb-2 block text-sm font-medium text-foreground">{label}</span>
       ) : null}
-      <RichTextEditorConfigProvider config={editorConfig}>
-        <AutocompleteProvider>
-          <OverlayPortalRootContext.Provider value={overlayPortalRef}>
-            <LexicalExtensionComposerToolbarFirst
-              extension={extension}
-              contentEditable={contentEditable}
-              editorShellRef={overlayPortalRef}
-              editorShellClassName={editorShellClassName}
-            >
-              <RichTextEditorFullPlugins
-                anchorElem={anchorElem}
-                onSerializedChange={disabled ? undefined : onChange}
-                disabled={disabled}
-              />
-            </LexicalExtensionComposerToolbarFirst>
-          </OverlayPortalRootContext.Provider>
-        </AutocompleteProvider>
-      </RichTextEditorConfigProvider>
+      <TooltipProvider>
+        <RichTextEditorConfigProvider config={editorConfig}>
+          <AutocompleteProvider>
+            <OverlayPortalRootContext.Provider value={overlayPortalRef}>
+              <LexicalExtensionComposerToolbarFirst
+                extension={extension}
+                contentEditable={contentEditable}
+                editorShellRef={overlayPortalRef}
+                editorShellClassName={editorShellClassName}
+              >
+                <RichTextEditorFullPlugins
+                  anchorElem={anchorElem}
+                  onSerializedChange={disabled ? undefined : onChange}
+                  disabled={disabled}
+                />
+              </LexicalExtensionComposerToolbarFirst>
+            </OverlayPortalRootContext.Provider>
+          </AutocompleteProvider>
+        </RichTextEditorConfigProvider>
+      </TooltipProvider>
     </div>
   );
 }
