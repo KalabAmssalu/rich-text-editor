@@ -5,6 +5,10 @@ import { HeadingNode, QuoteNode } from '@lexical/rich-text';
 
 import { editorTheme } from '@/lexical/editor-theme';
 
+/**
+ * @deprecated Use {@link RichTextEditorBox} instead. This config registers only basic nodes
+ * and does not include mentions, images, signatures, or extension-based features.
+ */
 export function createRichTextEditorInitialConfig(
   namespace: string,
   editable: boolean,

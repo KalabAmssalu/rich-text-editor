@@ -15,6 +15,7 @@ import type {
   RichTextEditorConfig,
   RichTextEditorMentionsConfig,
   RichTextEditorSignerConfig,
+  RichTextEditorSlotsConfig,
   RichTextEditorTemplatesConfig,
   RichTextEditorToolsConfig,
   StatusBarToolId,
@@ -36,6 +37,7 @@ const ALL_TOOLBAR_TOOLS: ToolbarToolId[] = [
   "insert",
 ];
 
+/** Full status bar set; placeholder tools (`aiAssistant`, `voiceTranslator`, `auditLog`) are opt-in via an explicit array or {@link RichTextEditorSlotsConfig}. */
 const ALL_STATUS_BAR_TOOLS: StatusBarToolId[] = [
   "characterCount",
   "copyAll",
@@ -43,13 +45,10 @@ const ALL_STATUS_BAR_TOOLS: StatusBarToolId[] = [
   "templates",
   "signature",
   "speechToText",
-  "aiAssistant",
-  "voiceTranslator",
   "importExport",
   "markdown",
   "editMode",
   "clear",
-  "auditLog",
 ];
 
 const DEFAULT_STATUS_BAR_TOOLS: StatusBarToolId[] = [
@@ -138,6 +137,7 @@ function resolveAutocomplete(
   return {
     additionalTerms: autocomplete.additionalTerms ?? [],
     enableEnglishDictionary: autocomplete.enableEnglishDictionary ?? true,
+    localStorageKey: autocomplete.localStorageKey,
   };
 }
 
@@ -148,6 +148,8 @@ export interface RichTextEditorConfigValue {
   showAutocomplete: boolean;
   templates: RichTextEditorTemplatesConfig | null;
   signer: RichTextEditorSignerConfig;
+  slots: RichTextEditorSlotsConfig;
+  onSpeechTranscript?: (transcript: string, isFinal: boolean) => void;
   showToolbar: boolean;
   toolbarTools: Set<ToolbarToolId>;
   isToolbarToolEnabled: (id: ToolbarToolId) => boolean;
@@ -199,6 +201,8 @@ export function RichTextEditorConfigProvider({
       showAutocomplete,
       templates,
       signer,
+      slots: config.slots ?? {},
+      onSpeechTranscript: config.onSpeechTranscript,
       showToolbar,
       toolbarTools,
       isToolbarToolEnabled: (id) => toolbarTools.has(id),

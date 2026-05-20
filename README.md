@@ -200,6 +200,7 @@ export function NotesEditor() {
 | `tools` | `RichTextEditorToolsConfig` | — | Shorthand; overrides `config.tools` |
 | `signer` | `RichTextEditorSignerConfig` | — | Shorthand; overrides `config.signer` |
 | `namespace` | `string` | `"rich-text-editor"` | Lexical editor namespace (use unique names if multiple editors on one page) |
+| `documentKey` | `string` | — | When this identity changes, the composer remounts and reloads snapshot (switching SOAP notes). See [Controlled](#controlled-load-existing-note) |
 | `id` | `string` | — | HTML `id` on the wrapper |
 | `label` | `string` | — | Accessible label above the editor |
 | `placeholder` | `string` | `"Start typing…"` | Placeholder when empty |
@@ -209,6 +210,10 @@ export function NotesEditor() {
 | `defaultValue` | `string \| null` | — | Initial Lexical JSON string (uncontrolled) |
 | `value` | `string \| null` | — | Lexical JSON string to load (see [Saving and loading](#saving-and-loading-documents)) |
 | `onChange` | `(doc: RichTextEditorDocumentExport) => void` | — | Called when the document changes |
+| `onChangeDebounceMs` | `number` | `0` | Debounce `onChange` (milliseconds). `0` = every update |
+| `exportFormat` | `'both' \| 'lexical' \| 'html'` | `'both'` | Fields to compute in `onChange` (omitted fields are `""`) |
+| `syncValue` | `boolean` | `false` | Apply external `value` while mounted (see [External sync](#external-value-sync)) |
+| `slots` | `RichTextEditorSlotsConfig` | — | Shorthand; overrides `config.slots` |
 
 **Config merge rule:** Top-level props (`mentions`, `autocomplete`, etc.) override the same field inside `config`.
 
@@ -249,19 +254,65 @@ Pass previously saved `lexicalJson`:
 const [noteJson, setNoteJson] = useState<string | null>(savedFromApi);
 
 <RichTextEditorBox
-  value={noteJson}
+  value={noteJson ?? undefined}
+  documentKey={encounterNoteId}
   onChange={({ lexicalJson }) => setNoteJson(lexicalJson)}
 />
 ```
 
-**Important:**
+When switching to another encounter note, **`documentKey` must change** (or wrap the editor in conditional rendering keyed by note id). That remounts Lexical once with the newly saved snapshot.
 
-- `value` must be **Lexical EditorState JSON** (what `onChange` returns in `lexicalJson`), not raw HTML or plain text.
-- Changing `value` recreates the editor instance (cursor and undo history reset). For frequent external updates, debounce saves in the parent or avoid passing `value` on every keystroke.
+```tsx
+<RichTextEditorBox
+  documentKey={`${soapId}-${revision}`}
+  value={storedJson ?? undefined}
+  onChange={(doc) => setStoredJson(doc.lexicalJson)}
+/>
+```
+
+### Focus stays while typing (controlled `value`)
+
+**v0.2.3+:** The editor no longer reconnects `$initialEditorState` on every keystroke. You can safely keep **`value={...}` and `setState(onChange)`** without losing caret focus each character.
+
+Older versions recreated the Lexical composer whenever `lexicalJson` changed; use **v0.2.3+** or, on older builds, **`defaultValue` only** plus your own persistence (no controlled `value` loop).
+
+Still true:
+
+- **`value`** must be **Lexical EditorState JSON**, not HTML.
+
+### External value sync
+
+When another source updates the same note while the editor is open (e.g. WebSocket), use one of:
+
+1. **`documentKey`** — change the key when switching notes (full remount; recommended for note switches).
+2. **`syncValue={true}`** — apply `value` even when the editor is focused.
+3. **Default** — if `value` changes and the editor is **not** focused, the document syncs automatically (skips when JSON already matches).
+
+```tsx
+<RichTextEditorBox
+  value={noteJson ?? undefined}
+  syncValue={forceApplyRemoteUpdate}
+  onChange={({ lexicalJson }) => setNoteJson(lexicalJson)}
+/>
+```
+
+### Performance: debounce and export format
+
+```tsx
+<RichTextEditorBox
+  onChangeDebounceMs={300}
+  exportFormat="lexical"
+  onChange={({ lexicalJson }) => saveDraft(lexicalJson)}
+/>
+```
+
+Use `exportFormat="lexical"` when you do not need HTML on every keystroke (smaller `onChange` work).
 
 ### Invalid `value` errors
 
-If `value` is malformed JSON or the wrong shape, Lexical may fail to parse it and the content area can show an error boundary message. Validate JSON before passing it in.
+Avoid passing **`""`** or stray strings when there is no saved note — use **`undefined`** or omit the prop. Never persist a Lexical snapshot where **`root.children` is empty**; that triggers `setEditorState: the editor state is empty` on load.
+
+**v0.2.2+:** `RichTextEditorBox` **normalizes** `value` / `defaultValue` before init (blank strings, invalid JSON, missing `root`, or empty root `children`). In those cases the editor opens a normal blank document and logs a **`[RichTextEditor]`** warning instead of crashing.
 
 ---
 
@@ -352,11 +403,12 @@ Enable by passing `autocomplete` (even `{}`). The status bar shows an autocomple
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `additionalTerms` | `string[]` | `[]` | Domain-specific words |
-| `enableEnglishDictionary` | `boolean` | `true` | Built-in English word list |
+| `enableEnglishDictionary` | `boolean` | `true` | Built-in English word list (lazy-loaded when autocomplete is enabled) |
+| `localStorageKey` | `string` | `emr-rich-text-autocomplete-enabled` | Key for the status-bar autocomplete toggle |
 
 Autocomplete also indexes mention labels, `insertValue`s, patient names/MRNs, and active patient fields when mentions are configured.
 
-Users can toggle autocomplete from the status bar; preference is stored in `localStorage` under `emr-rich-text-autocomplete-enabled`.
+Users can toggle autocomplete from the status bar; preference is stored in `localStorage` (see `localStorageKey` above).
 
 ---
 
@@ -424,7 +476,7 @@ config={{
 | `toolbar` / `statusBar` value | Behavior |
 |-------------------------------|----------|
 | omitted | Toolbar: all tools. Status bar: default set (see below) |
-| `true` | All tools |
+| `true` | All toolbar tools; status bar default + autocomplete/templates when configured (not placeholder AI/audit/voice tools) |
 | `false` | Hidden |
 | `ToolbarToolId[]` / `StatusBarToolId[]` | Only listed tools |
 
@@ -459,13 +511,35 @@ Plus `autocompleteToggle` if autocomplete is configured, and `templates` if temp
 | `templates` | Note template picker |
 | `signature` | Insert signature block |
 | `speechToText` | Browser speech recognition (where supported) |
-| `aiAssistant` | Placeholder dialog (wire your API) |
-| `voiceTranslator` | Placeholder dialog |
+| `aiAssistant` | Placeholder dialog, or `config.slots.aiAssistant` |
+| `voiceTranslator` | Placeholder dialog, or `config.slots.voiceTranslator` |
 | `importExport` | Import `.lexical` / `.docx`, export Lexical file |
 | `markdown` | Toggle markdown source view |
 | `editMode` | Toggle read-only |
 | `clear` | Clear document |
-| `auditLog` | Placeholder audit UI |
+| `auditLog` | Placeholder audit UI, or `config.slots.auditLog` |
+
+#### Status bar slots (host UI)
+
+```tsx
+config={{
+  tools: { statusBar: ["aiAssistant", "auditLog"] },
+  slots: {
+    aiAssistant: <MyAiButton />,
+    auditLog: <MyAuditPanelTrigger />,
+  },
+}}
+```
+
+#### Speech-to-text callback
+
+```tsx
+config={{
+  onSpeechTranscript: (transcript, isFinal) => {
+    if (isFinal) console.log("Final:", transcript);
+  },
+}}
+```
 
 Minimal toolbar example:
 
@@ -587,9 +661,13 @@ export default nextConfig;
 
 3. Import styles in a client layout or page (see [Styling](#styling)).
 
-4. Add `<Toaster />` from `sonner` if you use import/export.
+4. Add `<Toaster />` from `sonner` if you use import/export (`sonner` is an optional peer dependency).
 
 The editor renders a lightweight placeholder until the client mounts (avoids SSR hydration issues).
+
+### Bundle size
+
+The published `dist/index.js` is a single bundle (toolbar, Lexical UI, optional features). The English autocomplete dictionary is loaded at runtime only when `autocomplete` is configured and `enableEnglishDictionary` is not `false`. CI reports `dist/` file sizes on each build.
 
 ---
 
@@ -610,8 +688,10 @@ export { RichTextEditorBox } from "@kalabamssalu/rich-text-editor";
 // Helpers
 export { mergeEditorConfig } from "@kalabamssalu/rich-text-editor";
 export { buildMentionSearchIndex } from "@kalabamssalu/rich-text-editor";
+export { normalizeInitialLexicalJson } from "@kalabamssalu/rich-text-editor";
+export { DEFAULT_AUTOCOMPLETE_STORAGE_KEY } from "@kalabamssalu/rich-text-editor";
 
-// Legacy Lexical composer config (minimal nodes only — prefer RichTextEditorBox)
+/** @deprecated Prefer RichTextEditorBox — registers minimal nodes only */
 export { createRichTextEditorInitialConfig } from "@kalabamssalu/rich-text-editor";
 
 // Types
@@ -619,6 +699,8 @@ export type {
   RichTextEditorBoxProps,
   RichTextEditorConfig,
   RichTextEditorDocumentExport,
+  RichTextEditorExportFormat,
+  RichTextEditorSlotsConfig,
   RichTextEditorMentionsConfig,
   RichTextEditorAutocompleteConfig,
   RichTextEditorTemplatesConfig,
@@ -646,6 +728,8 @@ export type {
 | Unstyled / broken layout | Tailwind not scanning the package | Add `@source` or `content` path to `dist` (see [Styling](#styling)). |
 | Gray boxes, wrong colors | Missing CSS variables | Add shadcn-style theme variables or match your design tokens. |
 | Editor empty / plugins broken | Missing Lexical peers or duplicate Lexical | Install all `@lexical/*` peers at `^0.44.0`; dedupe with `npm ls lexical`. |
+| **`setEditorState: … editor state is empty`** | Saved JSON has **`root.children: []`**, invalid JSON, or `value=""` | Use **`undefined`** when no note (not `""`). Don’t persist empty-root snapshots from “clear”; upgrade to ≥0.2.2 which normalizes bad snapshots to a blank doc. |
+| **Caret jumps / blur after each keystroke** | Package older than **v0.2.3** with `value` + `setState(onChange)` (composer remounted every update) | Upgrade to **≥0.2.3** or use **`defaultValue` only** (no controlled loop). |
 | `value` does not load | Passing HTML instead of Lexical JSON | Use `onChange`’s `lexicalJson` for `value` / `defaultValue`. |
 | Import/export toasts missing | No Sonner toaster | Add `<Toaster />` from `sonner` to your app root. |
 | Build error: `react-day-picker` | Old install without dependencies | Run `pnpm install` / `npm install` after upgrading the package. |

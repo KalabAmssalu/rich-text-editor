@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 
-const STORAGE_KEY = "emr-rich-text-autocomplete-enabled";
+import { DEFAULT_AUTOCOMPLETE_STORAGE_KEY } from "@/core/types";
 
 type AutocompleteContextValue = {
   enabled: boolean;
@@ -21,32 +21,43 @@ const AutocompleteContext = createContext<AutocompleteContextValue | null>(
   null,
 );
 
-function readStoredEnabled(): boolean {
+function readStoredEnabled(storageKey: string): boolean {
   if (typeof window === "undefined") return true;
-  const stored = window.localStorage.getItem(STORAGE_KEY);
+  const stored = window.localStorage.getItem(storageKey);
   if (stored === null) return true;
   return stored === "true";
 }
 
-export function AutocompleteProvider({ children }: { children: ReactNode }) {
-  const [enabled, setEnabledState] = useState(readStoredEnabled);
+export function AutocompleteProvider({
+  children,
+  storageKey = DEFAULT_AUTOCOMPLETE_STORAGE_KEY,
+}: {
+  children: ReactNode;
+  storageKey?: string;
+}) {
+  const [enabled, setEnabledState] = useState(() =>
+    readStoredEnabled(storageKey),
+  );
 
-  const setEnabled = useCallback((value: boolean) => {
-    setEnabledState(value);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEY, String(value));
-    }
-  }, []);
+  const setEnabled = useCallback(
+    (value: boolean) => {
+      setEnabledState(value);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(storageKey, String(value));
+      }
+    },
+    [storageKey],
+  );
 
   const toggle = useCallback(() => {
     setEnabledState((prev) => {
       const next = !prev;
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(STORAGE_KEY, String(next));
+        window.localStorage.setItem(storageKey, String(next));
       }
       return next;
     });
-  }, []);
+  }, [storageKey]);
 
   const value = useMemo(
     () => ({ enabled, setEnabled, toggle }),

@@ -3,6 +3,8 @@ import type { LexicalEditor } from "lexical";
 
 export const EMR_RICH_TEXT_HTML_WRAPPER_CLASS = "emr-rich-text-html-export";
 
+export type RichTextEditorExportFormat = "both" | "lexical" | "html";
+
 export interface RichTextEditorDocumentExport {
   /** Lexical EditorState JSON — reload in RichTextEditorBox via `value` */
   lexicalJson: string;
@@ -15,15 +17,21 @@ export interface RichTextEditorDocumentExport {
  */
 export function exportEditorDocument(
   editor: LexicalEditor,
+  format: RichTextEditorExportFormat = "both",
 ): RichTextEditorDocumentExport {
-  const lexicalJson = JSON.stringify(editor.getEditorState().toJSON());
+  let lexicalJson = "";
+  if (format === "both" || format === "lexical") {
+    lexicalJson = JSON.stringify(editor.getEditorState().toJSON());
+  }
 
-  let innerHtml = "";
-  editor.getEditorState().read(() => {
-    innerHtml = $generateHtmlFromNodes(editor, null);
-  });
-
-  const html = `<div class="${EMR_RICH_TEXT_HTML_WRAPPER_CLASS}" data-emr-rich-text-export="true">${innerHtml}</div>`;
+  let html = "";
+  if (format === "both" || format === "html") {
+    let innerHtml = "";
+    editor.getEditorState().read(() => {
+      innerHtml = $generateHtmlFromNodes(editor, null);
+    });
+    html = `<div class="${EMR_RICH_TEXT_HTML_WRAPPER_CLASS}" data-emr-rich-text-export="true">${innerHtml}</div>`;
+  }
 
   return { lexicalJson, html };
 }

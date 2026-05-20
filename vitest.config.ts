@@ -9,5 +9,7 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    // Fork workers can hit startup timeouts on Windows when importing Lexical-heavy modules.
+    pool: "threads",
   },
 });

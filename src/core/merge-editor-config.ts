@@ -14,5 +14,7 @@ export function mergeEditorConfig(
     templates: props.templates ?? base.templates,
     signer: props.signer ?? base.signer,
     tools: props.tools ?? base.tools,
+    slots: props.slots ?? base.slots,
+    onSpeechTranscript: props.onSpeechTranscript ?? base.onSpeechTranscript,
   };
 }

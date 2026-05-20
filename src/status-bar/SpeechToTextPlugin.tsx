@@ -15,7 +15,7 @@ import {
 
 import { MicIcon } from 'lucide-react';
 
-import { useReport } from '@/lexical/use-report';
+import { useRichTextEditorConfig } from '@/core/editor-config-context';
 import { CAN_USE_DOM } from '@/lexical/can-use-dom';
 import { Button } from '@/ui/button';
 import {
@@ -86,15 +86,15 @@ function safeRecognitionStop(recognition: SpeechRecognitionInstance | null) {
 
 function SpeechToTextPluginImpl() {
   const [editor] = useLexicalComposerContext();
+  const { onSpeechTranscript } = useRichTextEditorConfig();
   const [isEnabled, setIsEnabled] = useState<boolean>(false);
   const [isSpeechToText, setIsSpeechToText] = useState(false);
   const SpeechRecognition =
     // @ts-expect-error missing type
     window.SpeechRecognition || window.webkitSpeechRecognition;
   const recognition = useRef<SpeechRecognitionInstance | null>(null);
-  const report = useReport();
-  const reportRef = useRef(report);
-  reportRef.current = report;
+  const onSpeechTranscriptRef = useRef(onSpeechTranscript);
+  onSpeechTranscriptRef.current = onSpeechTranscript;
 
   useEffect(() => {
     if (isEnabled && recognition.current === null) {
@@ -107,9 +107,11 @@ function SpeechToTextPluginImpl() {
           const speechEvent = event as SpeechRecognitionResultEvent;
           const resultItem = speechEvent.results.item(speechEvent.resultIndex);
           const { transcript } = resultItem.item(0);
-          reportRef.current(transcript);
+          const isFinal = resultItem.isFinal;
 
-          if (!resultItem.isFinal) {
+          onSpeechTranscriptRef.current?.(transcript, isFinal);
+
+          if (!isFinal) {
             return;
           }
 

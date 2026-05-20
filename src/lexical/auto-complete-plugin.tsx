@@ -1,5 +1,5 @@
 ﻿import type { JSX } from "react";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
@@ -25,7 +25,7 @@ import {
 import { useRichTextEditorConfig } from "@/core/editor-config-context";
 import { useAutocompleteEnabled } from "@/lexical/autocomplete-context";
 import { createAutocompleteQuery } from "@/lexical/autocomplete-corpus";
-import { ENGLISH_DICTIONARY } from "@/lexical/english-dictionary";
+import { loadEnglishDictionary } from "@/lexical/english-dictionary-loader";
 import {
   $createAutocompleteNode,
   AutocompleteNode,
@@ -73,21 +73,45 @@ function $search(selection: null | BaseSelection): [boolean, string] {
   return [true, word.reverse().join("")];
 }
 
+const emptyQuery = (): SearchPromise => ({
+  dismiss: () => {},
+  promise: Promise.resolve(null),
+});
+
 function useQuery(): (searchText: string) => SearchPromise {
   const { autocomplete, mentions, showAutocomplete } = useRichTextEditorConfig();
-  const queryFn = useMemo(() => {
-    if (!showAutocomplete || !autocomplete) {
-      return () => ({
-        dismiss: () => {},
-        promise: Promise.resolve(null),
-      });
-    }
-    return createAutocompleteQuery(autocomplete, mentions, ENGLISH_DICTIONARY);
-  }, [autocomplete, mentions, showAutocomplete]);
-  return useCallback(
-    (searchText: string) => queryFn(searchText),
-    [queryFn],
+  const [queryFn, setQueryFn] = useState<(searchText: string) => SearchPromise>(
+    emptyQuery,
   );
+
+  useEffect(() => {
+    if (!showAutocomplete || !autocomplete) {
+      setQueryFn(() => emptyQuery);
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      const englishDictionary =
+        autocomplete.enableEnglishDictionary !== false
+          ? await loadEnglishDictionary()
+          : [];
+      if (cancelled) return;
+      const query = createAutocompleteQuery(
+        autocomplete,
+        mentions,
+        englishDictionary,
+      );
+      setQueryFn(() => query);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [autocomplete, mentions, showAutocomplete]);
+
+  return useCallback((searchText: string) => queryFn(searchText), [queryFn]);
 }
 
 function formatSuggestionText(suggestion: string): string {
