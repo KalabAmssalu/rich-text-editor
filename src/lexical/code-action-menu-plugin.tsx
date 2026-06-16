@@ -3,7 +3,6 @@ import { type JSX, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { $isCodeNode, CodeNode } from "@lexical/code";
-import { getCodeLanguageOptions } from "@lexical/code-shiki";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $getNearestNodeFromDOMNode, isHTMLElement } from "lexical";
 
@@ -17,6 +16,8 @@ interface Position {
   right: string;
 }
 
+type CodeLanguageOption = readonly [string, string];
+
 function CodeActionMenuContainer({
   anchorElem,
 }: {
@@ -25,6 +26,9 @@ function CodeActionMenuContainer({
   const [editor] = useLexicalComposerContext();
 
   const [lang, setLang] = useState("");
+  const [codeLanguageOptions, setCodeLanguageOptions] = useState<
+    CodeLanguageOption[]
+  >([]);
   const [isShown, setShown] = useState<boolean>(false);
   const [shouldListenMouseMove, setShouldListenMouseMove] =
     useState<boolean>(false);
@@ -34,6 +38,21 @@ function CodeActionMenuContainer({
   });
   const codeSetRef = useRef<Set<string>>(new Set());
   const codeDOMNodeRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!shouldListenMouseMove) {
+      return;
+    }
+    let cancelled = false;
+    void import("@lexical/code-shiki").then(({ getCodeLanguageOptions }) => {
+      if (!cancelled) {
+        setCodeLanguageOptions(getCodeLanguageOptions());
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [shouldListenMouseMove]);
 
   function getCodeDOMNode(): HTMLElement | null {
     return codeDOMNodeRef.current;
@@ -121,7 +140,7 @@ function CodeActionMenuContainer({
     );
   }, [editor]);
 
-  const codeFriendlyName = getCodeLanguageOptions().find(
+  const codeFriendlyName = codeLanguageOptions.find(
     ([key]) => key === lang,
   )?.[1];
 

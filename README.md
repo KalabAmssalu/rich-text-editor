@@ -170,7 +170,7 @@ export function RootLayout({ children }) {
 "use client";
 
 import { useState } from "react";
-import { RichTextEditorBox } from "@kalabamssalu/rich-text-editor";
+import { RichTextEditorBox } from "@kalabamssalu/rich-text-editor/box";
 import type { RichTextEditorDocumentExport } from "@kalabamssalu/rich-text-editor";
 import "@kalabamssalu/rich-text-editor/styles.css";
 
@@ -186,6 +186,50 @@ export function NotesEditor() {
   );
 }
 ```
+
+---
+
+## Performance (LCP / main thread)
+
+The package splits **types/helpers** and **runtime** so host apps can keep the critical path light:
+
+| Import | Path | Loads |
+|--------|------|--------|
+| Types, `mergeEditorConfig`, `buildMentionSearchIndex`, etc. | `@kalabamssalu/rich-text-editor` | No Lexical editor runtime |
+| `RichTextEditorBox` | `@kalabamssalu/rich-text-editor/box` | Full editor (~800KB+ with peers) |
+
+**Recommended for App Router / LCP-sensitive pages** — dynamic import with `ssr: false`:
+
+```tsx
+"use client";
+
+import dynamic from "next/dynamic";
+import type { RichTextEditorBoxProps } from "@kalabamssalu/rich-text-editor";
+
+const RichTextEditorBox = dynamic(
+  () =>
+    import("@kalabamssalu/rich-text-editor/box").then((m) => m.RichTextEditorBox),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-[260px] animate-pulse rounded-md bg-muted/30" />
+    ),
+  },
+);
+
+export function ClinicalRichTextEditor(props: RichTextEditorBoxProps) {
+  return <RichTextEditorBox {...props} />;
+}
+```
+
+Host wrapper pattern (equivalent to splitting `rich-text-editor-package.ts` + `rich-text-editor-box.tsx`):
+
+- **Types/utils barrel** — `import type { … } from "@kalabamssalu/rich-text-editor"` only
+- **Runtime wrapper** — `import { RichTextEditorBox } from "@kalabamssalu/rich-text-editor/box"` inside a client file or dynamic import
+
+Inside the package, **Shiki** (`@lexical/code-shiki`) and the **English dictionary** load only when code blocks / autocomplete are used — not on initial parse of the main bundle.
+
+**Dependency dedupe:** If you use Prism/Shiki elsewhere, pin single versions in the host `pnpm.overrides` (e.g. `refractor`, `rehype-prism-plus`) to avoid duplicate highlighters on the main thread.
 
 ---
 
@@ -325,7 +369,8 @@ Pass everything through `config` or via flat props.
 Enable by providing `mentions` with a **`categoryTree`** (required). Type `@` in the editor to open the picker.
 
 ```tsx
-import { RichTextEditorBox, buildMentionSearchIndex } from "@kalabamssalu/rich-text-editor";
+import { RichTextEditorBox } from "@kalabamssalu/rich-text-editor/box";
+import { buildMentionSearchIndex } from "@kalabamssalu/rich-text-editor";
 import type { MentionMenuNode } from "@kalabamssalu/rich-text-editor";
 
 const categoryTree: MentionMenuNode[] = [
@@ -562,10 +607,8 @@ Minimal toolbar example:
 "use client";
 
 import { useState } from "react";
-import {
-  RichTextEditorBox,
-  buildMentionSearchIndex,
-} from "@kalabamssalu/rich-text-editor";
+import { RichTextEditorBox } from "@kalabamssalu/rich-text-editor/box";
+import { buildMentionSearchIndex } from "@kalabamssalu/rich-text-editor";
 import type {
   NoteTemplate,
   RichTextEditorDocumentExport,
@@ -682,10 +725,10 @@ The published `dist/index.js` is a single bundle (toolbar, Lexical UI, optional 
 ## Public API exports
 
 ```ts
-// Component
-export { RichTextEditorBox } from "@kalabamssalu/rich-text-editor";
+// Runtime component (heavy — use dynamic import on LCP-critical routes)
+export { RichTextEditorBox } from "@kalabamssalu/rich-text-editor/box";
 
-// Helpers
+// Lightweight: helpers + types (safe on shared barrels / server types)
 export { mergeEditorConfig } from "@kalabamssalu/rich-text-editor";
 export { buildMentionSearchIndex } from "@kalabamssalu/rich-text-editor";
 export { normalizeInitialLexicalJson } from "@kalabamssalu/rich-text-editor";
@@ -694,7 +737,7 @@ export { DEFAULT_AUTOCOMPLETE_STORAGE_KEY } from "@kalabamssalu/rich-text-editor
 /** @deprecated Prefer RichTextEditorBox — registers minimal nodes only */
 export { createRichTextEditorInitialConfig } from "@kalabamssalu/rich-text-editor";
 
-// Types
+// Types (from main entry — use `import type` only)
 export type {
   RichTextEditorBoxProps,
   RichTextEditorConfig,
@@ -716,7 +759,7 @@ export type {
 } from "@kalabamssalu/rich-text-editor";
 ```
 
-`createRichTextEditorInitialConfig` registers only basic nodes. **`RichTextEditorBox` is the supported integration path** — it registers mentions, images, signatures, embeds, and all extensions.
+`createRichTextEditorInitialConfig` registers only basic nodes. **`RichTextEditorBox` from `/box`** registers mentions, images, signatures, embeds, and all extensions.
 
 ---
 
@@ -738,6 +781,11 @@ export type {
 Enable verbose logging: errors are also logged as `[RichTextEditor]` in the console from the editor’s `onError` handler.
 
 ---
+
+## Breaking changes (0.2 → 0.3)
+
+- **`RichTextEditorBox` moved to subpath** — import from `@kalabamssalu/rich-text-editor/box` (not the root entry). Root exports types + helpers only.
+- See [Performance (LCP / main thread)](#performance-lcp--main-thread) for the recommended dynamic-import pattern.
 
 ## Breaking changes (0.1 → 0.2)
 

@@ -1,6 +1,6 @@
 {
   "name": "@kalabamssalu/rich-text-editor",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "Lexical rich text editor for React with configurable mentions, templates, and tools",
   "license": "MIT",
   "repository": {
@@ -24,6 +24,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./box": {
+      "types": "./dist/box.d.ts",
+      "import": "./dist/box.js",
+      "require": "./dist/box.cjs"
     },
     "./styles.css": "./dist/styles.css"
   },

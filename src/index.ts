@@ -1,4 +1,7 @@
-export { RichTextEditorBox } from "./core/RichTextEditorBox";
+/**
+ * Lightweight entry: types and tree-shakeable helpers only.
+ * Import the editor component from `@kalabamssalu/rich-text-editor/box`.
+ */
 export { mergeEditorConfig } from "./core/merge-editor-config";
 export { normalizeInitialLexicalJson } from "./core/normalize-initial-editor-json";
 export { createRichTextEditorInitialConfig } from "./config/editor-config";
